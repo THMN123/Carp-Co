@@ -434,7 +434,7 @@
             gap: 20px;
         }
 
-        .upload-form input, .upload-form textarea {
+        .upload-form input, .upload-form textarea, .upload-form select {
             padding: 12px;
             border: 1px solid #ddd;
             border-radius: 5px;
@@ -443,7 +443,7 @@
             transition: var(--transition);
         }
 
-        .upload-form input:focus, .upload-form textarea:focus {
+        .upload-form input:focus, .upload-form textarea:focus, .upload-form select:focus {
             border-color: var(--primary);
             outline: none;
             box-shadow: 0 0 0 2px rgba(139, 69, 19, 0.2);
@@ -496,6 +496,110 @@
             color: var(--gray);
             text-align: center;
             padding: 0 20px;
+        }
+
+        .video-preview {
+            width: 100%;
+            max-height: 200px;
+            display: none;
+        }
+
+        /* Admin Panel Sections */
+        .admin-panel {
+            background: var(--white);
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: var(--shadow);
+            margin-top: 30px;
+            display: none;
+        }
+
+        .admin-panel h3 {
+            color: var(--primary);
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .messages-list, .testimonials-list {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .message-card, .testimonial-card-admin {
+            background: #f8f5f0;
+            padding: 20px;
+            border-radius: 8px;
+            border-left: 4px solid var(--primary);
+        }
+
+        .message-header, .testimonial-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: start;
+            margin-bottom: 10px;
+        }
+
+        .message-info h4, .testimonial-info h4 {
+            color: var(--primary);
+            margin-bottom: 5px;
+        }
+
+        .message-info p, .testimonial-info p {
+            color: var(--gray);
+            font-size: 0.9rem;
+        }
+
+        .message-actions, .testimonial-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .approve-btn, .reject-btn, .delete-msg-btn {
+            padding: 6px 12px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: var(--transition);
+        }
+
+        .approve-btn {
+            background: #27ae60;
+            color: white;
+        }
+
+        .approve-btn:hover {
+            background: #229954;
+        }
+
+        .reject-btn, .delete-msg-btn {
+            background: #e74c3c;
+            color: white;
+        }
+
+        .reject-btn:hover, .delete-msg-btn:hover {
+            background: #c0392b;
+        }
+
+        .testimonial-status {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+
+        .status-approved {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status-pending {
+            background: #fff3cd;
+            color: #856404;
         }
 
         .loading-spinner {
@@ -1038,18 +1142,41 @@
                     <h3><i class="fas fa-lock"></i> Admin Gallery Upload</h3>
                     <p>Add your latest work directly from your device</p>
                     <form class="upload-form" id="uploadForm">
+                        <select id="mediaType" required>
+                            <option value="">Select Media Type</option>
+                            <option value="image">Image</option>
+                            <option value="video">Video</option>
+                        </select>
+                        
                         <input type="text" id="projectName" placeholder="Project Name" required>
                         <textarea id="projectDescription" placeholder="Project Description" required></textarea>
                         
                         <div class="image-preview" id="imagePreview">
-                            <span>No image selected. Click to choose or drag & drop</span>
+                            <span>No media selected. Click to choose or drag & drop</span>
                             <img id="previewImg" alt="Preview">
+                            <video id="previewVideo" class="video-preview" controls></video>
                         </div>
                         
-                        <input type="file" id="projectImage" accept="image/*" required style="display: none;">
+                        <input type="file" id="projectImage" accept="image/*,video/*" required style="display: none;">
                         <div class="loading-spinner" id="uploadSpinner"></div>
                         <button type="submit" class="upload-btn" id="uploadBtn">Upload Project</button>
                     </form>
+                </div>
+            </div>
+
+            <!-- Admin Contact Messages -->
+            <div class="admin-panel" id="contactMessagesPanel">
+                <h3><i class="fas fa-envelope"></i> Contact Messages</h3>
+                <div class="messages-list" id="messagesList">
+                    <!-- Messages will be loaded here -->
+                </div>
+            </div>
+
+            <!-- Admin Testimonials Management -->
+            <div class="admin-panel" id="testimonialsPanel">
+                <h3><i class="fas fa-star"></i> Manage Testimonials</h3>
+                <div class="testimonials-list" id="testimonialsList">
+                    <!-- Testimonials will be loaded here -->
                 </div>
             </div>
         </div>
@@ -1062,49 +1189,8 @@
                 <h2>Client Testimonials</h2>
                 <p>What our customers say about our work</p>
             </div>
-            <div class="testimonials-grid">
-                <div class="testimonial-card">
-                    <div class="testimonial-content">
-                        <p>"MasterCraft transformed our kitchen with custom cabinets that exceeded our expectations. The attention to detail and craftsmanship is exceptional."</p>
-                        <div class="testimonial-author">
-                            <div class="author-img">
-                                <i class="fas fa-user"></i>
-                            </div>
-                            <div class="author-info">
-                                <h4>Sarah Johnson</h4>
-                                <p>Homeowner</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="testimonial-card">
-                    <div class="testimonial-content">
-                        <p>"The custom dining table we ordered is the centerpiece of our home. The quality of the wood and the finish is outstanding. Worth every penny!"</p>
-                        <div class="testimonial-author">
-                            <div class="author-img">
-                                <i class="fas fa-user"></i>
-                            </div>
-                            <div class="author-info">
-                                <h4>Michael Thompson</h4>
-                                <p>Interior Design Client</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="testimonial-card">
-                    <div class="testimonial-content">
-                        <p>"I had an antique dresser restored by MasterCraft, and they did an incredible job. It looks better than when it was first made 100 years ago!"</p>
-                        <div class="testimonial-author">
-                            <div class="author-img">
-                                <i class="fas fa-user"></i>
-                            </div>
-                            <div class="author-info">
-                                <h4>Emily Rodriguez</h4>
-                                <p>Antique Collector</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+            <div class="testimonials-grid" id="testimonialsGrid">
+                <!-- Approved testimonials will be loaded here -->
             </div>
         </div>
     </section>
@@ -1284,6 +1370,13 @@
         const uploadBtn = document.getElementById('uploadBtn');
         const uploadSpinner = document.getElementById('uploadSpinner');
         const gallerySpinner = document.getElementById('gallerySpinner');
+        const mediaTypeSelect = document.getElementById('mediaType');
+        const previewVideo = document.getElementById('previewVideo');
+        const contactMessagesPanel = document.getElementById('contactMessagesPanel');
+        const testimonialsPanel = document.getElementById('testimonialsPanel');
+        const messagesList = document.getElementById('messagesList');
+        const testimonialsList = document.getElementById('testimonialsList');
+        const testimonialsGrid = document.getElementById('testimonialsGrid');
 
         // ===== AUTHENTICATION =====
         async function checkAuthStatus() {
@@ -1293,10 +1386,16 @@
                 adminLoginBtn.style.display = 'none';
                 adminLogoutBtn.style.display = 'block';
                 uploadSection.style.display = 'block';
+                contactMessagesPanel.style.display = 'block';
+                testimonialsPanel.style.display = 'block';
+                await loadContactMessages();
+                await loadTestimonials();
             } else {
                 adminLoginBtn.style.display = 'block';
                 adminLogoutBtn.style.display = 'none';
                 uploadSection.style.display = 'none';
+                contactMessagesPanel.style.display = 'none';
+                testimonialsPanel.style.display = 'none';
             }
             
             return user;
@@ -1366,7 +1465,18 @@
                 img.src = item.image_url;
                 img.alt = item.title;
                 
-                const overlay = document.createElement('div');
+                // Check if it's a video
+                if (item.media_type === 'video') {
+                    const video = document.createElement('video');
+                    video.src = item.image_url;
+                    video.controls = false;
+                    video.style.width = '100%';
+                    video.style.height = '100%';
+                    video.style.objectFit = 'cover';
+                    galleryItem.appendChild(video);
+                } else {
+                    galleryItem.appendChild(img);
+                }
                 overlay.className = 'gallery-overlay';
                 
                 const title = document.createElement('h4');
@@ -1404,14 +1514,17 @@
                     overlay.appendChild(actions);
                 }
                 
-                galleryItem.appendChild(img);
                 galleryItem.appendChild(overlay);
                 
-                // Click to view larger image
+                // Click to view larger image/video
                 galleryItem.addEventListener('click', () => {
-                    modalImg.src = item.image_url;
-                    modal.style.display = 'block';
-                    document.body.style.overflow = 'hidden';
+                    if (item.media_type === 'video') {
+                        window.open(item.image_url, '_blank');
+                    } else {
+                        modalImg.src = item.image_url;
+                        modal.style.display = 'block';
+                        document.body.style.overflow = 'hidden';
+                    }
                 });
                 
                 galleryContainer.appendChild(galleryItem);
@@ -1428,12 +1541,18 @@
                 return;
             }
             
+            const mediaType = mediaTypeSelect.value;
             const title = document.getElementById('projectName').value;
             const description = document.getElementById('projectDescription').value;
             const file = fileInput.files[0];
             
             if (!file && !currentEditItem) {
-                showToast('Please select an image', false);
+                showToast('Please select a file', false);
+                return;
+            }
+            
+            if (!mediaType) {
+                showToast('Please select media type', false);
                 return;
             }
             
@@ -1466,7 +1585,7 @@
                     imageUrl = urlData.publicUrl;
                     storagePath = filePath;
                     
-                    // Delete old image if editing
+                    // Delete old file if editing
                     if (currentEditItem && currentEditItem.storage_path) {
                         await supabaseClient.storage
                             .from('gallery')
@@ -1482,7 +1601,8 @@
                             title,
                             description,
                             image_url: imageUrl,
-                            storage_path: storagePath
+                            storage_path: storagePath,
+                            media_type: mediaType
                         })
                         .eq('id', currentEditItem.id);
                     
@@ -1496,6 +1616,7 @@
                             description,
                             image_url: imageUrl,
                             storage_path: storagePath,
+                            media_type: mediaType,
                             created_by: user.id
                         });
                     
@@ -1518,11 +1639,19 @@
         // Edit gallery item
         function openEditForm(item) {
             currentEditItem = item;
+            mediaTypeSelect.value = item.media_type || 'image';
             document.getElementById('projectName').value = item.title;
             document.getElementById('projectDescription').value = item.description;
             
-            previewImg.src = item.image_url;
-            previewImg.style.display = 'block';
+            if (item.media_type === 'video') {
+                previewVideo.src = item.image_url;
+                previewVideo.style.display = 'block';
+                previewImg.style.display = 'none';
+            } else {
+                previewImg.src = item.image_url;
+                previewImg.style.display = 'block';
+                previewVideo.style.display = 'none';
+            }
             document.querySelector('#imagePreview span').style.display = 'none';
             
             uploadBtn.textContent = 'Update Project';
@@ -1565,6 +1694,7 @@
         function resetUploadForm() {
             uploadForm.reset();
             previewImg.style.display = 'none';
+            previewVideo.style.display = 'none';
             document.querySelector('#imagePreview span').style.display = 'block';
             currentEditItem = null;
             uploadBtn.textContent = 'Upload Project';
@@ -1594,6 +1724,187 @@
             showToast('Message sent successfully! We\'ll contact you soon.', true);
         });
 
+        // ===== CONTACT MESSAGES MANAGEMENT =====
+        async function loadContactMessages() {
+            const { data, error } = await supabaseClient
+                .from('contact_messages')
+                .select('*')
+                .order('created_at', { ascending: false });
+            
+            if (error) {
+                console.error('Error loading messages:', error);
+                return;
+            }
+            
+            messagesList.innerHTML = '';
+            
+            if (data.length === 0) {
+                messagesList.innerHTML = '<p style="text-align: center; color: var(--gray); padding: 20px;">No messages yet.</p>';
+                return;
+            }
+            
+            data.forEach(msg => {
+                const messageCard = document.createElement('div');
+                messageCard.className = 'message-card';
+                messageCard.innerHTML = `
+                    <div class="message-header">
+                        <div class="message-info">
+                            <h4>${msg.name}</h4>
+                            <p>${msg.email} ${msg.phone ? '• ' + msg.phone : ''}</p>
+                            <p>${new Date(msg.created_at).toLocaleString()}</p>
+                        </div>
+                        <div class="message-actions">
+                            <button class="delete-msg-btn" onclick="deleteMessage('${msg.id}')">
+                                <i class="fas fa-trash"></i> Delete
+                            </button>
+                        </div>
+                    </div>
+                    <p style="margin-top: 10px;">${msg.message}</p>
+                `;
+                messagesList.appendChild(messageCard);
+            });
+        }
+
+        async function deleteMessage(id) {
+            if (!confirm('Delete this message?')) return;
+            
+            const { error } = await supabaseClient
+                .from('contact_messages')
+                .delete()
+                .eq('id', id);
+            
+            if (error) {
+                showToast('Failed to delete message', false);
+                return;
+            }
+            
+            showToast('Message deleted', true);
+            await loadContactMessages();
+        }
+
+        // ===== TESTIMONIALS MANAGEMENT =====
+        async function loadTestimonials() {
+            const { data, error } = await supabaseClient
+                .from('testimonials')
+                .select('*')
+                .order('created_at', { ascending: false });
+            
+            if (error) {
+                console.error('Error loading testimonials:', error);
+                return;
+            }
+            
+            testimonialsList.innerHTML = '';
+            
+            if (data.length === 0) {
+                testimonialsList.innerHTML = '<p style="text-align: center; color: var(--gray); padding: 20px;">No testimonials yet.</p>';
+                return;
+            }
+            
+            data.forEach(test => {
+                const card = document.createElement('div');
+                card.className = 'testimonial-card-admin';
+                card.innerHTML = `
+                    <div class="testimonial-header">
+                        <div class="testimonial-info">
+                            <h4>${test.name}</h4>
+                            <p>${test.role || 'Client'}</p>
+                            <span class="testimonial-status ${test.approved ? 'status-approved' : 'status-pending'}">
+                                ${test.approved ? 'Approved' : 'Pending'}
+                            </span>
+                        </div>
+                        <div class="testimonial-actions">
+                            ${!test.approved ? `
+                                <button class="approve-btn" onclick="approveTestimonial('${test.id}')">
+                                    <i class="fas fa-check"></i> Approve
+                                </button>
+                            ` : ''}
+                            <button class="reject-btn" onclick="deleteTestimonial('${test.id}')">
+                                <i class="fas fa-trash"></i> Delete
+                            </button>
+                        </div>
+                    </div>
+                    <p style="margin-top: 10px;">${test.message}</p>
+                `;
+                testimonialsList.appendChild(card);
+            });
+        }
+
+        async function approveTestimonial(id) {
+            const { error } = await supabaseClient
+                .from('testimonials')
+                .update({ approved: true })
+                .eq('id', id);
+            
+            if (error) {
+                showToast('Failed to approve testimonial', false);
+                return;
+            }
+            
+            showToast('Testimonial approved!', true);
+            await loadTestimonials();
+            await loadPublicTestimonials();
+        }
+
+        async function deleteTestimonial(id) {
+            if (!confirm('Delete this testimonial?')) return;
+            
+            const { error } = await supabaseClient
+                .from('testimonials')
+                .delete()
+                .eq('id', id);
+            
+            if (error) {
+                showToast('Failed to delete testimonial', false);
+                return;
+            }
+            
+            showToast('Testimonial deleted', true);
+            await loadTestimonials();
+            await loadPublicTestimonials();
+        }
+
+        // Load approved testimonials for public view
+        async function loadPublicTestimonials() {
+            const { data, error } = await supabaseClient
+                .from('testimonials')
+                .select('*')
+                .eq('approved', true)
+                .order('created_at', { ascending: false });
+            
+            if (error) {
+                console.error('Error loading public testimonials:', error);
+                return;
+            }
+            
+            testimonialsGrid.innerHTML = '';
+            
+            if (data.length === 0) {
+                testimonialsGrid.innerHTML = '<p style="text-align: center; grid-column: 1/-1; padding: 40px; color: var(--gray);">No testimonials yet.</p>';
+                return;
+            }
+            
+            data.forEach(test => {
+                const card = document.createElement('div');
+                card.className = 'testimonial-card';
+                card.innerHTML = `
+                    <div class="testimonial-content">
+                        <p>"${test.message}"</p>
+                        <div class="testimonial-author">
+                            <div class="author-img">
+                                <i class="fas fa-user"></i>
+                            </div>
+                            <div class="author-info">
+                                <h4>${test.name}</h4>
+                                <p>${test.role || 'Client'}</p>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                testimonialsGrid.appendChild(card);
+            });
+        }
+
         // ===== IMAGE PREVIEW HANDLING =====
         imagePreview.addEventListener('click', () => {
             fileInput.click();
@@ -1604,8 +1915,17 @@
             if (file) {
                 const reader = new FileReader();
                 reader.onload = function(e) {
-                    previewImg.src = e.target.result;
-                    previewImg.style.display = 'block';
+                    if (file.type.startsWith('video/')) {
+                        previewVideo.src = e.target.result;
+                        previewVideo.style.display = 'block';
+                        previewImg.style.display = 'none';
+                        mediaTypeSelect.value = 'video';
+                    } else {
+                        previewImg.src = e.target.result;
+                        previewImg.style.display = 'block';
+                        previewVideo.style.display = 'none';
+                        mediaTypeSelect.value = 'image';
+                    }
                     document.querySelector('#imagePreview span').style.display = 'none';
                 }
                 reader.readAsDataURL(file);
