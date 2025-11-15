@@ -1565,13 +1565,22 @@
                 
                 // If new file selected, upload it
                 if (file) {
+                    // Check file size (max 50MB for videos, 5MB for images)
+                    const maxSize = file.type.startsWith('video/') ? 50 * 1024 * 1024 : 5 * 1024 * 1024;
+                    if (file.size > maxSize) {
+                        throw new Error(`File too large. Max ${file.type.startsWith('video/') ? '50MB' : '5MB'}`);
+                    }
+                    
                     const fileExt = file.name.split('.').pop();
                     const fileName = `${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
-                    const filePath = `gallery/${fileName}`;
+                    const filePath = fileName; // Don't add 'gallery/' prefix, bucket handles it
                     
                     const { error: uploadError } = await supabaseClient.storage
                         .from('gallery')
-                        .upload(filePath, file);
+                        .upload(filePath, file, {
+                            cacheControl: '3600',
+                            upsert: false
+                        });
                     
                     if (uploadError) {
                         throw uploadError;
