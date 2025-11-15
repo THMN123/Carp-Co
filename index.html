@@ -1452,7 +1452,7 @@
             </div>
 
             <!-- Admin Contact Messages -->
-            <div class="admin-panel" id="contactMessagesPanel">
+            <div class="admin-panel" id="contactMessagesPanel" style="display: none;">
                 <h3><i class="fas fa-envelope"></i> Contact Messages</h3>
                 <div class="messages-list" id="messagesList">
                     <!-- Messages will be loaded here -->
@@ -1460,7 +1460,7 @@
             </div>
 
             <!-- Admin Testimonials Management -->
-            <div class="admin-panel" id="testimonialsPanel">
+            <div class="admin-panel" id="testimonialsPanel" style="display: none;">
                 <h3><i class="fas fa-star"></i> Manage Testimonials</h3>
                 <div class="testimonials-list" id="testimonialsList">
                     <!-- Testimonials will be loaded here -->
@@ -1687,6 +1687,26 @@
         const testimonialsGrid = document.getElementById('testimonialsGrid');
         const filterButtons = document.querySelectorAll('.filter-btn');
 
+        // ===== DATABASE SCHEMA CHECK =====
+        async function checkDatabaseSchema() {
+            try {
+                // Test if media_urls column exists
+                const { data, error } = await supabaseClient
+                    .from('gallery')
+                    .select('media_urls')
+                    .limit(1);
+                
+                if (error && error.message.includes('column')) {
+                    console.log('Media URLs column not found, using fallback schema');
+                    return false;
+                }
+                return true;
+            } catch (error) {
+                console.log('Schema check failed, using fallback:', error);
+                return false;
+            }
+        }
+
         // ===== AUTHENTICATION =====
         async function checkAuthStatus() {
             const { data: { user } } = await supabaseClient.auth.getUser();
@@ -1745,6 +1765,7 @@
         async function renderGallery() {
             gallerySpinner.style.display = 'block';
             const user = await checkAuthStatus();
+            const hasMediaUrls = await checkDatabaseSchema();
             
             const { data, error } = await supabaseClient
                 .from('gallery')
@@ -1767,7 +1788,7 @@
             }
             
             data.forEach(item => {
-                const galleryItem = createGalleryItem(item, user);
+                const galleryItem = createGalleryItem(item, user, hasMediaUrls);
                 galleryContainer.appendChild(galleryItem);
             });
             
@@ -1776,15 +1797,23 @@
         }
 
         // Create a gallery item with carousel functionality
-        function createGalleryItem(item, user) {
+        function createGalleryItem(item, user, hasMediaUrls) {
             const galleryItem = document.createElement('div');
             galleryItem.className = 'gallery-item';
             
+            // Get media URLs - handle both old and new schema
+            let mediaUrls = [];
+            if (hasMediaUrls && item.media_urls) {
+                mediaUrls = item.media_urls;
+            } else if (item.image_url) {
+                mediaUrls = [item.image_url];
+            }
+            
             // Determine media type for filtering
             let mediaType = 'image';
-            if (item.media_urls && item.media_urls.length > 1) {
+            if (mediaUrls.length > 1) {
                 mediaType = 'multiple';
-            } else if (item.media_type === 'video') {
+            } else if (item.media_type === 'video' || (mediaUrls[0] && mediaUrls[0].includes('.mp4'))) {
                 mediaType = 'video';
             }
             galleryItem.setAttribute('data-type', mediaType);
@@ -1793,7 +1822,7 @@
             const mediaBadge = document.createElement('div');
             mediaBadge.className = `media-badge ${mediaType}`;
             if (mediaType === 'multiple') {
-                mediaBadge.textContent = `${item.media_urls ? item.media_urls.length : 1}+`;
+                mediaBadge.textContent = `${mediaUrls.length}+`;
             } else {
                 mediaBadge.textContent = mediaType === 'video' ? 'Video' : 'Image';
             }
@@ -1805,9 +1834,6 @@
             
             const carouselTrack = document.createElement('div');
             carouselTrack.className = 'carousel-track';
-            
-            // Get media URLs (support both single and multiple media)
-            const mediaUrls = item.media_urls || [item.image_url];
             
             mediaUrls.forEach((mediaUrl, index) => {
                 const slide = document.createElement('div');
@@ -1923,7 +1949,7 @@
                 editBtn.innerHTML = '<i class="fas fa-edit"></i>';
                 editBtn.onclick = (e) => {
                     e.stopPropagation();
-                    openEditForm(item);
+                    openEditForm(item, hasMediaUrls);
                 };
                 
                 const deleteBtn = document.createElement('button');
@@ -1943,7 +1969,7 @@
             
             // Click to open modal
             galleryItem.addEventListener('click', () => {
-                openGalleryModal(item);
+                openGalleryModal(item, hasMediaUrls);
             });
             
             return galleryItem;
@@ -2088,8 +2114,14 @@
         }
 
         // Open gallery modal
-        function openGalleryModal(item) {
-            const mediaUrls = item.media_urls || [item.image_url];
+        function openGalleryModal(item, hasMediaUrls) {
+            // Get media URLs - handle both old and new schema
+            let mediaUrls = [];
+            if (hasMediaUrls && item.media_urls) {
+                mediaUrls = item.media_urls;
+            } else if (item.image_url) {
+                mediaUrls = [item.image_url];
+            }
             
             // Clear previous content
             modalCarouselTrack.innerHTML = '';
@@ -2252,7 +2284,7 @@
             }
         }
 
-        // Upload project with multiple files
+        // Upload project with multiple files - UPDATED FOR SCHEMA COMPATIBILITY
         uploadForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             
@@ -2275,8 +2307,13 @@
             uploadSpinner.style.display = 'block';
             
             try {
-                let mediaUrls = currentEditItem ? (currentEditItem.media_urls || [currentEditItem.image_url]) : [];
-                let storagePaths = currentEditItem ? (currentEditItem.storage_paths || [currentEditItem.storage_path]) : [];
+                // Check if we have the new schema
+                const hasMediaUrls = await checkDatabaseSchema();
+                
+                let mediaUrls = [];
+                let storagePaths = [];
+                let imageUrl = null;
+                let storagePath = null;
                 
                 // If new files selected, upload them
                 if (files.length > 0) {
@@ -2316,16 +2353,31 @@
                         storagePaths.push(filePath);
                     }
                     
+                    // For backward compatibility, set the first URL as image_url
+                    imageUrl = mediaUrls[0];
+                    storagePath = storagePaths[0];
+                    
                     // Delete old files if editing
-                    if (currentEditItem && currentEditItem.storage_paths) {
-                        await supabaseClient.storage
-                            .from('gallery')
-                            .remove(currentEditItem.storage_paths);
-                    } else if (currentEditItem && currentEditItem.storage_path) {
-                        await supabaseClient.storage
-                            .from('gallery')
-                            .remove([currentEditItem.storage_path]);
+                    if (currentEditItem) {
+                        const oldPaths = currentEditItem.storage_paths || 
+                                       (currentEditItem.storage_path ? [currentEditItem.storage_path] : []);
+                        if (oldPaths.length > 0) {
+                            await supabaseClient.storage
+                                .from('gallery')
+                                .remove(oldPaths);
+                        }
                     }
+                } else if (currentEditItem) {
+                    // If editing without new files, use existing data
+                    if (hasMediaUrls && currentEditItem.media_urls) {
+                        mediaUrls = currentEditItem.media_urls;
+                        storagePaths = currentEditItem.storage_paths || [];
+                    } else if (currentEditItem.image_url) {
+                        mediaUrls = [currentEditItem.image_url];
+                        storagePaths = currentEditItem.storage_path ? [currentEditItem.storage_path] : [];
+                    }
+                    imageUrl = currentEditItem.image_url;
+                    storagePath = currentEditItem.storage_path;
                 }
                 
                 // Determine media type
@@ -2334,32 +2386,38 @@
                     mediaType = 'video';
                 }
                 
+                // Prepare update/insert data based on schema availability
+                const updateData = {
+                    title,
+                    description,
+                    media_type: mediaType,
+                    likes: currentEditItem ? currentEditItem.likes : 0
+                };
+                
+                // Only include media_urls if the schema supports it
+                if (hasMediaUrls) {
+                    updateData.media_urls = mediaUrls;
+                    updateData.storage_paths = storagePaths;
+                }
+                
+                // Always include the legacy fields for backward compatibility
+                updateData.image_url = imageUrl;
+                updateData.storage_path = storagePath;
+                
                 // Save or update in database
                 if (currentEditItem) {
                     const { error: updateError } = await supabaseClient
                         .from('gallery')
-                        .update({
-                            title,
-                            description,
-                            media_urls: mediaUrls,
-                            storage_paths: storagePaths,
-                            media_type: mediaType
-                        })
+                        .update(updateData)
                         .eq('id', currentEditItem.id);
                     
                     if (updateError) throw updateError;
                     showToast('Project updated successfully!', true);
                 } else {
+                    updateData.created_by = user.id;
                     const { error: insertError } = await supabaseClient
                         .from('gallery')
-                        .insert({
-                            title,
-                            description,
-                            media_urls: mediaUrls,
-                            storage_paths: storagePaths,
-                            media_type: mediaType,
-                            created_by: user.id
-                        });
+                        .insert([updateData]);
                     
                     if (insertError) throw insertError;
                     showToast('Project uploaded successfully!', true);
@@ -2379,7 +2437,7 @@
         });
 
         // Edit gallery item
-        function openEditForm(item) {
+        function openEditForm(item, hasMediaUrls) {
             currentEditItem = item;
             document.getElementById('projectName').value = item.title;
             document.getElementById('projectDescription').value = item.description;
@@ -2388,7 +2446,14 @@
             multiUploadPreview.innerHTML = '';
             document.querySelector('#imagePreview span').style.display = 'none';
             
-            const mediaUrls = item.media_urls || [item.image_url];
+            // Get media URLs - handle both old and new schema
+            let mediaUrls = [];
+            if (hasMediaUrls && item.media_urls) {
+                mediaUrls = item.media_urls;
+            } else if (item.image_url) {
+                mediaUrls = [item.image_url];
+            }
+            
             mediaUrls.forEach(url => {
                 const previewItem = document.createElement('div');
                 previewItem.className = 'upload-preview-item';
