@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Carp Co.</title>
+    <title>Carp Co. | Interactive Gallery</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=Roboto:wght@300;400;500&display=swap">
     <style>
@@ -1655,6 +1655,7 @@
         let currentCarouselIndex = 0;
         let currentModalIndex = 0;
         let likedProjects = JSON.parse(localStorage.getItem('likedProjects')) || {};
+        let currentCarouselStates = new Map(); // Track carousel states for each gallery item
 
         // ===== DOM ELEMENTS =====
         const mobileMenuBtn = document.getElementById('mobileMenuBtn');
@@ -1787,8 +1788,8 @@
                 return;
             }
             
-            data.forEach(item => {
-                const galleryItem = createGalleryItem(item, user, hasMediaUrls);
+            data.forEach((item, index) => {
+                const galleryItem = createGalleryItem(item, user, hasMediaUrls, index);
                 galleryContainer.appendChild(galleryItem);
             });
             
@@ -1797,9 +1798,10 @@
         }
 
         // Create a gallery item with carousel functionality
-        function createGalleryItem(item, user, hasMediaUrls) {
+        function createGalleryItem(item, user, hasMediaUrls, itemIndex) {
             const galleryItem = document.createElement('div');
             galleryItem.className = 'gallery-item';
+            galleryItem.dataset.itemIndex = itemIndex;
             
             // Get media URLs - handle both old and new schema
             let mediaUrls = [];
@@ -1831,9 +1833,11 @@
             // Create carousel for multiple media
             const carousel = document.createElement('div');
             carousel.className = 'gallery-carousel';
+            carousel.dataset.itemIndex = itemIndex;
             
             const carouselTrack = document.createElement('div');
             carouselTrack.className = 'carousel-track';
+            carouselTrack.dataset.currentIndex = '0';
             
             mediaUrls.forEach((mediaUrl, index) => {
                 const slide = document.createElement('div');
@@ -1866,7 +1870,7 @@
             
             carousel.appendChild(carouselTrack);
             
-            // Add carousel navigation if multiple media
+            // Add carousel navigation ONLY if multiple media
             if (mediaUrls.length > 1) {
                 const carouselNav = document.createElement('div');
                 carouselNav.className = 'carousel-nav';
@@ -1876,7 +1880,7 @@
                 prevBtn.innerHTML = '<i class="fas fa-chevron-left"></i>';
                 prevBtn.onclick = (e) => {
                     e.stopPropagation();
-                    navigateCarousel(carouselTrack, mediaUrls.length, -1);
+                    navigateCarousel(carouselTrack, mediaUrls.length, -1, itemIndex);
                 };
                 
                 const nextBtn = document.createElement('button');
@@ -1884,7 +1888,7 @@
                 nextBtn.innerHTML = '<i class="fas fa-chevron-right"></i>';
                 nextBtn.onclick = (e) => {
                     e.stopPropagation();
-                    navigateCarousel(carouselTrack, mediaUrls.length, 1);
+                    navigateCarousel(carouselTrack, mediaUrls.length, 1, itemIndex);
                 };
                 
                 carouselNav.appendChild(prevBtn);
@@ -1900,7 +1904,7 @@
                     dot.className = `carousel-dot ${i === 0 ? 'active' : ''}`;
                     dot.onclick = (e) => {
                         e.stopPropagation();
-                        navigateCarousel(carouselTrack, mediaUrls.length, i, true);
+                        navigateCarousel(carouselTrack, mediaUrls.length, i, itemIndex, true);
                     };
                     carouselDots.appendChild(dot);
                 }
@@ -1982,49 +1986,55 @@
             carousels.forEach(carousel => {
                 const track = carousel.querySelector('.carousel-track');
                 const slides = carousel.querySelectorAll('.carousel-slide');
-                const dots = carousel.querySelectorAll('.carousel-dot');
+                const itemIndex = carousel.dataset.itemIndex;
                 
-                // Add touch/swipe support
-                let startX = 0;
-                let endX = 0;
+                // Initialize carousel state
+                currentCarouselStates.set(itemIndex, 0);
                 
-                carousel.addEventListener('touchstart', (e) => {
-                    startX = e.touches[0].clientX;
-                });
-                
-                carousel.addEventListener('touchmove', (e) => {
-                    endX = e.touches[0].clientX;
-                });
-                
-                carousel.addEventListener('touchend', () => {
-                    const diff = startX - endX;
-                    if (Math.abs(diff) > 50) { // Minimum swipe distance
-                        if (diff > 0) {
-                            // Swipe left - next
-                            navigateCarousel(track, slides.length, 1);
-                        } else {
-                            // Swipe right - previous
-                            navigateCarousel(track, slides.length, -1);
+                // Add touch/swipe support ONLY for multiple media items
+                if (slides.length > 1) {
+                    let startX = 0;
+                    let endX = 0;
+                    let isSwiping = false;
+                    
+                    carousel.addEventListener('touchstart', (e) => {
+                        startX = e.touches[0].clientX;
+                        isSwiping = true;
+                    });
+                    
+                    carousel.addEventListener('touchmove', (e) => {
+                        if (!isSwiping) return;
+                        endX = e.touches[0].clientX;
+                    });
+                    
+                    carousel.addEventListener('touchend', () => {
+                        if (!isSwiping) return;
+                        isSwiping = false;
+                        
+                        const diff = startX - endX;
+                        const minSwipeDistance = 50; // Minimum swipe distance
+                        
+                        if (Math.abs(diff) > minSwipeDistance) {
+                            if (diff > 0) {
+                                // Swipe left - next
+                                navigateCarousel(track, slides.length, 1, itemIndex);
+                            } else {
+                                // Swipe right - previous
+                                navigateCarousel(track, slides.length, -1, itemIndex);
+                            }
                         }
-                    }
-                });
+                    });
+                }
             });
         }
 
-        // Navigate carousel
-        function navigateCarousel(track, totalSlides, direction, directIndex = false) {
-            const slides = track.parentElement.querySelectorAll('.carousel-slide');
-            const dots = track.parentElement.querySelectorAll('.carousel-dot');
+        // Navigate carousel - FIXED VERSION
+        function navigateCarousel(track, totalSlides, direction, itemIndex, directIndex = false) {
+            const carousel = track.parentElement;
+            const dots = carousel.querySelectorAll('.carousel-dot');
             
-            let currentIndex = 0;
-            
-            // Find current index
-            for (let i = 0; i < slides.length; i++) {
-                if (slides[i].getBoundingClientRect().left >= track.getBoundingClientRect().left) {
-                    currentIndex = i;
-                    break;
-                }
-            }
+            // Get current index from data attribute or state
+            let currentIndex = parseInt(track.dataset.currentIndex) || 0;
             
             let newIndex;
             if (directIndex !== false) {
@@ -2036,10 +2046,18 @@
             // Update track position
             track.style.transform = `translateX(-${newIndex * 100}%)`;
             
+            // Update current index in data attribute
+            track.dataset.currentIndex = newIndex;
+            
+            // Update state
+            currentCarouselStates.set(itemIndex, newIndex);
+            
             // Update dots
-            dots.forEach((dot, index) => {
-                dot.classList.toggle('active', index === newIndex);
-            });
+            if (dots.length > 0) {
+                dots.forEach((dot, index) => {
+                    dot.classList.toggle('active', index === newIndex);
+                });
+            }
         }
 
         // Toggle like for a project - AVAILABLE TO ALL VISITORS
@@ -2164,7 +2182,7 @@
             document.body.style.overflow = 'hidden';
         }
 
-        // Navigate modal carousel
+        // Navigate modal carousel - FIXED VERSION
         function navigateModalCarousel(direction) {
             const slides = modalCarouselTrack.querySelectorAll('.modal-carousel-slide');
             const dots = modalDots.querySelectorAll('.modal-dot');
