@@ -1461,10 +1461,6 @@
                 const galleryItem = document.createElement('div');
                 galleryItem.className = 'gallery-item';
                 
-                const img = document.createElement('img');
-                img.src = item.image_url;
-                img.alt = item.title;
-                
                 // Check if it's a video
                 if (item.media_type === 'video') {
                     const video = document.createElement('video');
@@ -1475,8 +1471,13 @@
                     video.style.objectFit = 'cover';
                     galleryItem.appendChild(video);
                 } else {
+                    const img = document.createElement('img');
+                    img.src = item.image_url;
+                    img.alt = item.title;
                     galleryItem.appendChild(img);
                 }
+
+                const overlay = document.createElement('div');
                 overlay.className = 'gallery-overlay';
                 
                 const title = document.createElement('h4');
@@ -1573,7 +1574,7 @@
                     
                     const fileExt = file.name.split('.').pop();
                     const fileName = `${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
-                    const filePath = fileName; // Don't add 'gallery/' prefix, bucket handles it
+                    const filePath = fileName;
                     
                     const { error: uploadError } = await supabaseClient.storage
                         .from('gallery')
