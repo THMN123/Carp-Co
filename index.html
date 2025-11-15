@@ -1629,6 +1629,7 @@
                 
             } catch (error) {
                 console.error('Upload error:', error);
+                console.error('Error stack:', error.stack);
                 showToast('Upload failed: ' + error.message, false);
             } finally {
                 uploadBtn.disabled = false;
