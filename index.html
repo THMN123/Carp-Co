@@ -448,6 +448,20 @@
             box-shadow: 0 8px 25px rgba(0, 0, 0, 0.4);
         }
 
+        /* Video Duration Badge */
+        .video-duration {
+            position: absolute;
+            bottom: 15px;
+            right: 15px;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            z-index: 2;
+        }
+
         /* Like Button - Instagram Style */
         .like-btn {
             position: absolute;
@@ -1104,6 +1118,104 @@
             color: var(--secondary);
         }
 
+        /* Admin Panel Sections */
+        .admin-panel {
+            background: var(--white);
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: var(--shadow);
+            margin-top: 30px;
+            display: none;
+        }
+
+        .admin-panel h3 {
+            color: var(--primary);
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .messages-list, .testimonials-list {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .message-card, .testimonial-card-admin {
+            background: #f8f5f0;
+            padding: 20px;
+            border-radius: 8px;
+            border-left: 4px solid var(--primary);
+        }
+
+        .message-header, .testimonial-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: start;
+            margin-bottom: 10px;
+        }
+
+        .message-info h4, .testimonial-info h4 {
+            color: var(--primary);
+            margin-bottom: 5px;
+        }
+
+        .message-info p, .testimonial-info p {
+            color: var(--gray);
+            font-size: 0.9rem;
+        }
+
+        .message-actions, .testimonial-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .approve-btn, .reject-btn, .delete-msg-btn {
+            padding: 6px 12px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: var(--transition);
+        }
+
+        .approve-btn {
+            background: #27ae60;
+            color: white;
+        }
+
+        .approve-btn:hover {
+            background: #229954;
+        }
+
+        .reject-btn, .delete-msg-btn {
+            background: #e74c3c;
+            color: white;
+        }
+
+        .reject-btn:hover, .delete-msg-btn:hover {
+            background: #c0392b;
+        }
+
+        .testimonial-status {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+
+        .status-approved {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status-pending {
+            background: #fff3cd;
+            color: #856404;
+        }
+
         /* Login Modal */
         .login-modal {
             display: none;
@@ -1452,7 +1564,7 @@
             </div>
 
             <!-- Admin Contact Messages -->
-            <div class="admin-panel" id="contactMessagesPanel" style="display: none;">
+            <div class="admin-panel" id="contactMessagesPanel">
                 <h3><i class="fas fa-envelope"></i> Contact Messages</h3>
                 <div class="messages-list" id="messagesList">
                     <!-- Messages will be loaded here -->
@@ -1460,7 +1572,7 @@
             </div>
 
             <!-- Admin Testimonials Management -->
-            <div class="admin-panel" id="testimonialsPanel" style="display: none;">
+            <div class="admin-panel" id="testimonialsPanel">
                 <h3><i class="fas fa-star"></i> Manage Testimonials</h3>
                 <div class="testimonials-list" id="testimonialsList">
                     <!-- Testimonials will be loaded here -->
@@ -1648,15 +1760,15 @@
         
         const { createClient } = supabase;
         const supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-
+    
         // ===== GLOBAL VARIABLES =====
         let currentEditIndex = null;
         let currentEditItem = null;
         let currentCarouselIndex = 0;
         let currentModalIndex = 0;
         let likedProjects = JSON.parse(localStorage.getItem('likedProjects')) || {};
-        let currentCarouselStates = new Map(); // Track carousel states for each gallery item
-
+        let currentCarouselStates = new Map();
+    
         // ===== DOM ELEMENTS =====
         const mobileMenuBtn = document.getElementById('mobileMenuBtn');
         const navLinks = document.getElementById('navLinks');
@@ -1687,11 +1799,10 @@
         const testimonialsList = document.getElementById('testimonialsList');
         const testimonialsGrid = document.getElementById('testimonialsGrid');
         const filterButtons = document.querySelectorAll('.filter-btn');
-
+    
         // ===== DATABASE SCHEMA CHECK =====
         async function checkDatabaseSchema() {
             try {
-                // Test if media_urls column exists
                 const { data, error } = await supabaseClient
                     .from('gallery')
                     .select('media_urls')
@@ -1707,7 +1818,7 @@
                 return false;
             }
         }
-
+    
         // ===== AUTHENTICATION =====
         async function checkAuthStatus() {
             const { data: { user } } = await supabaseClient.auth.getUser();
@@ -1730,7 +1841,7 @@
             
             return user;
         }
-
+    
         // Login handler
         loginForm.addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -1753,7 +1864,7 @@
             await checkAuthStatus();
             await renderGallery();
         });
-
+    
         // Logout handler
         adminLogoutBtn.addEventListener('click', async () => {
             await supabaseClient.auth.signOut();
@@ -1761,7 +1872,28 @@
             await checkAuthStatus();
             await renderGallery();
         });
-
+    
+        // ===== REAL-TIME UPDATES =====
+        function setupRealtimeUpdates() {
+            // Subscribe to gallery updates
+            const gallerySubscription = supabaseClient
+                .channel('gallery-changes')
+                .on('postgres_changes', 
+                    { 
+                        event: '*', 
+                        schema: 'public', 
+                        table: 'gallery' 
+                    }, 
+                    async (payload) => {
+                        console.log('Gallery update received:', payload);
+                        await renderGallery(); // Refresh gallery when any change happens
+                    }
+                )
+                .subscribe();
+    
+            return gallerySubscription;
+        }
+    
         // ===== GALLERY FUNCTIONS =====
         async function renderGallery() {
             gallerySpinner.style.display = 'block';
@@ -1796,12 +1928,20 @@
             // Initialize carousels
             initializeCarousels();
         }
-
+    
+        // Format video duration
+        function formatDuration(seconds) {
+            const mins = Math.floor(seconds / 60);
+            const secs = Math.floor(seconds % 60);
+            return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+        }
+    
         // Create a gallery item with carousel functionality
         function createGalleryItem(item, user, hasMediaUrls, itemIndex) {
             const galleryItem = document.createElement('div');
             galleryItem.className = 'gallery-item';
             galleryItem.dataset.itemIndex = itemIndex;
+            galleryItem.dataset.itemId = item.id; // Add ID for real-time updates
             
             // Get media URLs - handle both old and new schema
             let mediaUrls = [];
@@ -1850,6 +1990,18 @@
                     video.muted = true;
                     video.loop = true;
                     slide.appendChild(video);
+                    
+                    // Add video duration badge
+                    const durationBadge = document.createElement('div');
+                    durationBadge.className = 'video-duration';
+                    durationBadge.textContent = '0:00';
+                    
+                    video.addEventListener('loadedmetadata', function() {
+                        const duration = formatDuration(video.duration);
+                        durationBadge.textContent = duration;
+                    });
+                    
+                    slide.appendChild(durationBadge);
                     
                     // Add video play icon for first slide
                     if (index === 0) {
@@ -1924,7 +2076,7 @@
             };
             galleryItem.appendChild(likeBtn);
             
-            // Create like count
+            // Create like count - SHOW ACTUAL COUNT FROM DATABASE
             const likeCount = document.createElement('div');
             likeCount.className = 'like-count';
             likeCount.textContent = item.likes || 0;
@@ -1978,7 +2130,7 @@
             
             return galleryItem;
         }
-
+    
         // Initialize carousels for all gallery items
         function initializeCarousels() {
             const carousels = document.querySelectorAll('.gallery-carousel');
@@ -2027,7 +2179,7 @@
                 }
             });
         }
-
+    
         // Navigate carousel - FIXED VERSION
         function navigateCarousel(track, totalSlides, direction, itemIndex, directIndex = false) {
             const carousel = track.parentElement;
@@ -2059,19 +2211,19 @@
                 });
             }
         }
-
-        // Toggle like for a project - AVAILABLE TO ALL VISITORS
+    
+        // Toggle like for a project - FIXED REAL-TIME VERSION
         async function toggleLike(projectId, likeBtn, likeCount) {
             // Toggle visual state immediately for better UX
             const isLiked = likeBtn.classList.contains('liked');
             
             if (isLiked) {
                 likeBtn.classList.remove('liked');
-                likeCount.textContent = parseInt(likeCount.textContent) - 1;
+                // Don't update count here - wait for real-time update
                 delete likedProjects[projectId];
             } else {
                 likeBtn.classList.add('liked');
-                likeCount.textContent = parseInt(likeCount.textContent) + 1;
+                // Don't update count here - wait for real-time update
                 likedProjects[projectId] = true;
                 
                 // Add animation effect
@@ -2084,7 +2236,7 @@
             // Save to localStorage
             localStorage.setItem('likedProjects', JSON.stringify(likedProjects));
             
-            // UPDATE: Allow ANY visitor to update likes in the database
+            // UPDATE: Update likes in database - this will trigger real-time updates
             try {
                 // First get current like count
                 const { data: project, error: fetchError } = await supabaseClient
@@ -2095,6 +2247,12 @@
                 
                 if (fetchError) {
                     console.error('Error fetching project:', fetchError);
+                    // Revert the UI if update fails
+                    if (isLiked) {
+                        likeBtn.classList.add('liked');
+                    } else {
+                        likeBtn.classList.remove('liked');
+                    }
                     return;
                 }
                 
@@ -2111,10 +2269,8 @@
                     // Revert the UI if update fails
                     if (isLiked) {
                         likeBtn.classList.add('liked');
-                        likeCount.textContent = parseInt(likeCount.textContent) + 1;
                     } else {
                         likeBtn.classList.remove('liked');
-                        likeCount.textContent = parseInt(likeCount.textContent) - 1;
                     }
                 }
                     
@@ -2123,14 +2279,12 @@
                 // Revert the UI if update fails
                 if (isLiked) {
                     likeBtn.classList.add('liked');
-                    likeCount.textContent = parseInt(likeCount.textContent) + 1;
                 } else {
                     likeBtn.classList.remove('liked');
-                    likeCount.textContent = parseInt(likeCount.textContent) - 1;
                 }
             }
         }
-
+    
         // Open gallery modal
         function openGalleryModal(item, hasMediaUrls) {
             // Get media URLs - handle both old and new schema
@@ -2155,6 +2309,18 @@
                     video.src = mediaUrl;
                     video.controls = true;
                     slide.appendChild(video);
+                    
+                    // Add video duration badge for modal
+                    const durationBadge = document.createElement('div');
+                    durationBadge.className = 'video-duration';
+                    durationBadge.textContent = '0:00';
+                    
+                    video.addEventListener('loadedmetadata', function() {
+                        const duration = formatDuration(video.duration);
+                        durationBadge.textContent = duration;
+                    });
+                    
+                    slide.appendChild(durationBadge);
                 } else {
                     const img = document.createElement('img');
                     img.src = mediaUrl;
@@ -2181,7 +2347,7 @@
             galleryModal.classList.add('active');
             document.body.style.overflow = 'hidden';
         }
-
+    
         // Navigate modal carousel - FIXED VERSION
         function navigateModalCarousel(direction) {
             const slides = modalCarouselTrack.querySelectorAll('.modal-carousel-slide');
@@ -2204,7 +2370,7 @@
             
             currentModalIndex = newIndex;
         }
-
+    
         // Close gallery modal
         function closeGalleryModalFunc() {
             galleryModal.classList.remove('active');
@@ -2216,7 +2382,7 @@
                 video.pause();
             });
         }
-
+    
         // Filter gallery items
         function filterGallery(filter) {
             const items = document.querySelectorAll('.gallery-item');
@@ -2229,7 +2395,7 @@
                 }
             });
         }
-
+    
         // ===== UPLOAD FUNCTIONALITY =====
         // Multi-file upload handling
         imagePreview.addEventListener('click', () => {
@@ -2239,7 +2405,7 @@
         fileInput.addEventListener('change', function() {
             handleFileSelection(this.files);
         });
-
+    
         // Drag and drop for multiple files
         imagePreview.addEventListener('dragover', (e) => {
             e.preventDefault();
@@ -2260,7 +2426,7 @@
             const files = e.dataTransfer.files;
             handleFileSelection(files);
         });
-
+    
         // Handle file selection
         function handleFileSelection(files) {
             multiUploadPreview.innerHTML = '';
@@ -2301,7 +2467,7 @@
                 }
             }
         }
-
+    
         // Upload project with multiple files - UPDATED FOR SCHEMA COMPATIBILITY
         uploadForm.addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -2453,7 +2619,7 @@
                 uploadSpinner.style.display = 'none';
             }
         });
-
+    
         // Edit gallery item
         function openEditForm(item, hasMediaUrls) {
             currentEditItem = item;
@@ -2504,7 +2670,7 @@
             fileInput.required = false;
             uploadSection.scrollIntoView({ behavior: 'smooth' });
         }
-
+    
         // Delete gallery item
         async function deleteGalleryItem(item) {
             if (!confirm('Are you sure you want to delete this gallery item?')) {
@@ -2536,7 +2702,7 @@
                 showToast('Delete failed: ' + error.message, false);
             }
         }
-
+    
         // Reset upload form
         function resetUploadForm() {
             uploadForm.reset();
@@ -2546,7 +2712,7 @@
             uploadBtn.textContent = 'Upload Project';
             fileInput.required = true;
         }
-
+    
         // ===== CONTACT FORM =====
         contactForm.addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -2569,7 +2735,7 @@
             contactForm.reset();
             showToast('Message sent successfully! We\'ll contact you soon.', true);
         });
-
+    
         // ===== CONTACT MESSAGES MANAGEMENT =====
         async function loadContactMessages() {
             const { data, error } = await supabaseClient
@@ -2610,7 +2776,7 @@
                 messagesList.appendChild(messageCard);
             });
         }
-
+    
         async function deleteMessage(id) {
             if (!confirm('Delete this message?')) return;
             
@@ -2627,7 +2793,7 @@
             showToast('Message deleted', true);
             await loadContactMessages();
         }
-
+    
         // ===== TESTIMONIALS MANAGEMENT =====
         async function loadTestimonials() {
             const { data, error } = await supabaseClient
@@ -2675,7 +2841,7 @@
                 testimonialsList.appendChild(card);
             });
         }
-
+    
         async function approveTestimonial(id) {
             const { error } = await supabaseClient
                 .from('testimonials')
@@ -2691,7 +2857,7 @@
             await loadTestimonials();
             await loadPublicTestimonials();
         }
-
+    
         async function deleteTestimonial(id) {
             if (!confirm('Delete this testimonial?')) return;
             
@@ -2709,7 +2875,7 @@
             await loadTestimonials();
             await loadPublicTestimonials();
         }
-
+    
         // Load approved testimonials for public view
         async function loadPublicTestimonials() {
             const { data, error } = await supabaseClient
@@ -2750,7 +2916,7 @@
                 testimonialsGrid.appendChild(card);
             });
         }
-
+    
         // ===== MODAL HANDLING =====
         adminLoginBtn.addEventListener('click', () => {
             loginModal.style.display = 'block';
@@ -2778,14 +2944,14 @@
                 closeGalleryModalFunc();
             }
         });
-
+    
         // ===== MOBILE MENU =====
         mobileMenuBtn.addEventListener('click', () => {
             navLinks.classList.toggle('active');
             mobileMenuBtn.innerHTML = navLinks.classList.contains('active') ? 
                 '<i class="fas fa-times"></i>' : '<i class="fas fa-bars"></i>';
         });
-
+    
         // ===== FILTER BUTTONS =====
         filterButtons.forEach(button => {
             button.addEventListener('click', () => {
@@ -2797,7 +2963,7 @@
                 filterGallery(button.dataset.filter);
             });
         });
-
+    
         // ===== UTILITY FUNCTIONS =====
         function showToast(message, isSuccess = true) {
             const toast = document.getElementById('toast');
@@ -2809,7 +2975,7 @@
                 toast.classList.remove('show');
             }, 3000);
         }
-
+    
         // ===== SMOOTH SCROLLING =====
         document.querySelectorAll('a[href^="#"]').forEach(anchor => {
             anchor.addEventListener('click', function(e) {
@@ -2827,14 +2993,17 @@
                 }
             });
         });
-
+    
         // ===== INITIALIZATION =====
         window.addEventListener('DOMContentLoaded', async () => {
             await checkAuthStatus();
             await renderGallery();
             await loadPublicTestimonials();
+            
+            // Set up real-time updates
+            setupRealtimeUpdates();
         });
-
+    
         // Make functions globally accessible for onclick handlers
         window.deleteMessage = deleteMessage;
         window.approveTestimonial = approveTestimonial;
